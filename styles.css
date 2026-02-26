@@ -1,0 +1,143 @@
+:root {
+  --bg: #050b05;
+  --bg-panel: #081208;
+  --green: #61ff7e;
+  --green-dim: #3ac55b;
+  --red: #ff4f72;
+  --border: #1d4f28;
+  --text: #ceffd8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Courier New", Courier, monospace;
+  color: var(--text);
+  background: radial-gradient(circle at top, #0b1e0f 0, var(--bg) 55%);
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.scanline {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.25) 3px
+  );
+  opacity: 0.32;
+}
+
+.terminal {
+  width: min(920px, 100%);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #070d07, var(--bg-panel));
+  padding: 1.25rem;
+  box-shadow: 0 0 25px rgba(97, 255, 126, 0.15);
+}
+
+.terminal__header h1 {
+  margin: 0.2rem 0;
+  color: var(--green);
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+}
+
+.terminal__prompt {
+  margin: 0;
+  color: var(--green-dim);
+}
+
+.terminal__note {
+  margin: 0.4rem 0 1rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.tab,
+button {
+  border: 1px solid var(--border);
+  background: #0d1b0e;
+  color: var(--green);
+  padding: 0.55rem 0.8rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.tab.is-active {
+  border-color: var(--green);
+  box-shadow: inset 0 0 12px rgba(97, 255, 126, 0.15);
+}
+
+.panel {
+  display: none;
+}
+
+.panel.is-active {
+  display: block;
+}
+
+form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+input,
+textarea {
+  border: 1px solid var(--border);
+  background: #040904;
+  color: var(--text);
+  padding: 0.6rem;
+  font-family: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.warning {
+  color: #ffe48b;
+}
+
+.status {
+  min-height: 1.4rem;
+}
+
+.result {
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--border);
+}
+
+code {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--green);
+}
+
+.error {
+  color: var(--red);
+}

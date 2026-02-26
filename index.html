@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Leave a Message // OTP Terminal</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="scanline" aria-hidden="true"></div>
+    <main class="terminal">
+      <header class="terminal__header">
+        <p class="terminal__prompt">root@otp-node:~$ ./leave-a-message</p>
+        <h1>One-Time Pad Message Vault</h1>
+        <p class="terminal__note">
+          Keys are never stored. Decryption happens only in your browser.
+        </p>
+      </header>
+
+      <section class="tabs" aria-label="Application sections">
+        <button class="tab is-active" data-tab="create">Leave Message</button>
+        <button class="tab" data-tab="find">Find &amp; Decipher</button>
+      </section>
+
+      <section class="panel is-active" id="panel-create">
+        <form id="create-form" autocomplete="off">
+          <label>
+            Message ID
+            <input name="id" required maxlength="80" placeholder="e.g. operation-neon" />
+          </label>
+
+          <label>
+            Open Text (stored as-is)
+            <textarea
+              name="openText"
+              required
+              rows="3"
+              placeholder="Visible fallback message"
+            ></textarea>
+          </label>
+
+          <label>
+            Text to Encrypt
+            <textarea
+              name="secretText"
+              required
+              rows="3"
+              placeholder="Encrypted with one-time pad"
+            ></textarea>
+          </label>
+
+          <label>
+            OTP Key (must match secret text length)
+            <textarea
+              name="key"
+              required
+              rows="3"
+              placeholder="Paste or generate a key"
+            ></textarea>
+          </label>
+
+          <div class="actions">
+            <button type="button" id="generate-key">Generate Random Key</button>
+            <button type="submit">Encrypt &amp; Save Message</button>
+          </div>
+
+          <p id="key-warning" class="warning" hidden>
+            Generated key is shown once. Save it now — without it, deciphering is impossible.
+          </p>
+
+          <p id="create-status" class="status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="panel" id="panel-find">
+        <form id="search-form" autocomplete="off">
+          <label>
+            Message ID
+            <input name="searchId" required maxlength="80" placeholder="Find by id" />
+          </label>
+          <button type="submit">Find Message</button>
+        </form>
+
+        <article id="result" class="result" hidden>
+          <h2>Message Found</h2>
+          <p><strong>ID:</strong> <span id="result-id"></span></p>
+          <p><strong>Open Text:</strong> <span id="result-open"></span></p>
+          <p><strong>Encrypted Text:</strong> <code id="result-encrypted"></code></p>
+
+          <form id="decipher-form" autocomplete="off">
+            <label>
+              OTP Key for Deciphering
+              <textarea
+                name="decipherKey"
+                required
+                rows="3"
+                placeholder="Enter the exact key"
+              ></textarea>
+            </label>
+            <button type="submit">Decipher</button>
+          </form>
+
+          <p><strong>Deciphered Text:</strong> <span id="result-deciphered">—</span></p>
+          <p id="decipher-status" class="status" role="status" aria-live="polite"></p>
+        </article>
+
+        <p id="search-status" class="status" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>
