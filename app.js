@@ -1,0 +1,216 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  doc,
+  getDoc,
+  getFirestore,
+  serverTimestamp,
+  setDoc,
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const FIREBASE_CONFIG = globalThis.FIREBASE_CONFIG;
+const db = FIREBASE_CONFIG ? getFirestore(initializeApp(FIREBASE_CONFIG)) : null;
+
+const tabs = document.querySelectorAll(".tab");
+const panels = {
+  create: document.getElementById("panel-create"),
+  find: document.getElementById("panel-find"),
+};
+
+const createForm = document.getElementById("create-form");
+const createStatus = document.getElementById("create-status");
+const keyWarning = document.getElementById("key-warning");
+const generateKeyBtn = document.getElementById("generate-key");
+
+const searchForm = document.getElementById("search-form");
+const searchStatus = document.getElementById("search-status");
+const resultCard = document.getElementById("result");
+const resultId = document.getElementById("result-id");
+const resultOpen = document.getElementById("result-open");
+const resultEncrypted = document.getElementById("result-encrypted");
+
+const decipherForm = document.getElementById("decipher-form");
+const decipherStatus = document.getElementById("decipher-status");
+const resultDeciphered = document.getElementById("result-deciphered");
+
+let selectedMessage = null;
+
+init();
+
+function init() {
+  if (!db) {
+    const message =
+      "Firebase is not configured. Copy firebase-config.example.js to firebase-config.js and fill values.";
+    setStatus(createStatus, message, true);
+    setStatus(searchStatus, message, true);
+    createForm.querySelector("button[type='submit']").disabled = true;
+    searchForm.querySelector("button[type='submit']").disabled = true;
+  }
+}
+
+tabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    tabs.forEach((button) => button.classList.remove("is-active"));
+    Object.values(panels).forEach((panel) => panel.classList.remove("is-active"));
+
+    tab.classList.add("is-active");
+    panels[tab.dataset.tab].classList.add("is-active");
+  });
+});
+
+generateKeyBtn.addEventListener("click", () => {
+  const secretText = createForm.secretText.value;
+  if (!secretText.length) {
+    setStatus(createStatus, "Write text to encrypt first.", true);
+    return;
+  }
+
+  createForm.key.value = generateRandomKey(secretText.length);
+  keyWarning.hidden = false;
+  setStatus(createStatus, `Random key generated (${secretText.length} chars).`);
+});
+
+createForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  if (!db) {
+    setStatus(createStatus, "Firebase is not configured.", true);
+    return;
+  }
+
+  const id = createForm.id.value.trim();
+  const openText = createForm.openText.value;
+  const secretText = createForm.secretText.value;
+  const key = createForm.key.value;
+
+  if (!id || !openText || !secretText || !key) {
+    setStatus(createStatus, "All fields are required.", true);
+    return;
+  }
+
+  if (key.length !== secretText.length) {
+    setStatus(createStatus, "Key length must exactly match text-to-encrypt length.", true);
+    return;
+  }
+
+  const encryptedText = encrypt(secretText, key);
+
+  try {
+    const messageRef = doc(db, "messages", id);
+    const existing = await getDoc(messageRef);
+    if (existing.exists()) {
+      setStatus(createStatus, "ID already exists. Use a unique id.", true);
+      return;
+    }
+
+    await setDoc(messageRef, {
+      id,
+      openText,
+      encryptedText,
+      encryptedLength: secretText.length,
+      createdAt: serverTimestamp(),
+    });
+
+    createForm.reset();
+    keyWarning.hidden = true;
+    setStatus(createStatus, `Message '${id}' encrypted and saved to Firestore.`);
+  } catch (error) {
+    setStatus(createStatus, `Could not save message: ${error.message}`, true);
+  }
+});
+
+searchForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  if (!db) {
+    setStatus(searchStatus, "Firebase is not configured.", true);
+    return;
+  }
+
+  const id = searchForm.searchId.value.trim();
+  const messageRef = doc(db, "messages", id);
+
+  try {
+    const snapshot = await getDoc(messageRef);
+
+    if (!snapshot.exists()) {
+      selectedMessage = null;
+      resultCard.hidden = true;
+      setStatus(searchStatus, "No message found for this id.", true);
+      return;
+    }
+
+    const found = snapshot.data();
+    selectedMessage = found;
+
+    resultId.textContent = found.id;
+    resultOpen.textContent = found.openText;
+    resultEncrypted.textContent = found.encryptedText;
+    resultDeciphered.textContent = "—";
+    decipherForm.reset();
+    resultCard.hidden = false;
+    setStatus(searchStatus, "Message loaded. Enter key to decipher.");
+    setStatus(decipherStatus, "");
+  } catch (error) {
+    selectedMessage = null;
+    resultCard.hidden = true;
+    setStatus(searchStatus, `Lookup failed: ${error.message}`, true);
+  }
+});
+
+decipherForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  if (!selectedMessage) {
+    setStatus(decipherStatus, "Find a message first.", true);
+    return;
+  }
+
+  const key = decipherForm.decipherKey.value;
+  if (key.length !== selectedMessage.encryptedLength) {
+    setStatus(decipherStatus, "Key length mismatch.", true);
+    return;
+  }
+
+  try {
+    const deciphered = decrypt(selectedMessage.encryptedText, key);
+    resultDeciphered.textContent = deciphered;
+    setStatus(decipherStatus, "Deciphered locally. Key was not saved.");
+  } catch {
+    setStatus(decipherStatus, "Could not decipher with the provided key.", true);
+  }
+});
+
+function encrypt(text, key) {
+  return text
+    .split("")
+    .map((char, index) => (char.charCodeAt(0) ^ key.charCodeAt(index)).toString(16).padStart(4, "0"))
+    .join("");
+}
+
+function decrypt(cipherHex, key) {
+  if (cipherHex.length % 4 !== 0) {
+    throw new Error("Invalid cipher format");
+  }
+
+  const blocks = cipherHex.match(/.{1,4}/g) || [];
+  if (blocks.length !== key.length) {
+    throw new Error("Key length mismatch");
+  }
+
+  return blocks
+    .map((hex, index) => String.fromCharCode(parseInt(hex, 16) ^ key.charCodeAt(index)))
+    .join("");
+}
+
+function generateRandomKey(length) {
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:,.<>?/";
+  const bytes = new Uint32Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (value) => chars[value % chars.length]).join("");
+}
+
+function setStatus(target, message, isError = false) {
+  target.textContent = message;
+  target.classList.toggle("error", isError);
+}
