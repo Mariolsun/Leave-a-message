@@ -2,10 +2,10 @@
 // This file is loaded before app.js and must define globalThis.FIREBASE_CONFIG.
 
 globalThis.FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.firebasestorage.app",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyBarszf9JkvR1OMmh3qvsWpq_tjz0aG4ao",
+  authDomain: "leave-a-message-a280b.firebaseapp.com",
+  projectId: "leave-a-message-a280b",
+  storageBucket: "leave-a-message-a280b.firebasestorage.app",
+  messagingSenderId: "781227501808",
+  appId: "1:781227501808:web:ea1fa35ffc47d872dcba35",
 };
