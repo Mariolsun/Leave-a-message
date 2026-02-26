@@ -1,4 +1,14 @@
-const STORAGE_KEY = "otpMessagesDB";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  doc,
+  getDoc,
+  getFirestore,
+  serverTimestamp,
+  setDoc,
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const FIREBASE_CONFIG = globalThis.FIREBASE_CONFIG;
+const db = FIREBASE_CONFIG ? getFirestore(initializeApp(FIREBASE_CONFIG)) : null;
 
 const tabs = document.querySelectorAll(".tab");
 const panels = {
@@ -22,13 +32,19 @@ const decipherForm = document.getElementById("decipher-form");
 const decipherStatus = document.getElementById("decipher-status");
 const resultDeciphered = document.getElementById("result-deciphered");
 
-let messages = [];
 let selectedMessage = null;
 
 init();
 
-async function init() {
-  messages = await loadMessages();
+function init() {
+  if (!db) {
+    const message =
+      "Firebase is not configured. Copy firebase-config.example.js to firebase-config.js and fill values.";
+    setStatus(createStatus, message, true);
+    setStatus(searchStatus, message, true);
+    createForm.querySelector("button[type='submit']").disabled = true;
+    searchForm.querySelector("button[type='submit']").disabled = true;
+  }
 }
 
 tabs.forEach((tab) => {
@@ -53,8 +69,13 @@ generateKeyBtn.addEventListener("click", () => {
   setStatus(createStatus, `Random key generated (${secretText.length} chars).`);
 });
 
-createForm.addEventListener("submit", (event) => {
+createForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+
+  if (!db) {
+    setStatus(createStatus, "Firebase is not configured.", true);
+    return;
+  }
 
   const id = createForm.id.value.trim();
   const openText = createForm.openText.value;
@@ -66,11 +87,6 @@ createForm.addEventListener("submit", (event) => {
     return;
   }
 
-  if (messages.some((message) => message.id === id)) {
-    setStatus(createStatus, "ID already exists. Use a unique id.", true);
-    return;
-  }
-
   if (key.length !== secretText.length) {
     setStatus(createStatus, "Key length must exactly match text-to-encrypt length.", true);
     return;
@@ -78,41 +94,67 @@ createForm.addEventListener("submit", (event) => {
 
   const encryptedText = encrypt(secretText, key);
 
-  messages.push({
-    id,
-    openText,
-    encryptedText,
-    encryptedLength: secretText.length,
-    createdAt: new Date().toISOString(),
-  });
+  try {
+    const messageRef = doc(db, "messages", id);
+    const existing = await getDoc(messageRef);
+    if (existing.exists()) {
+      setStatus(createStatus, "ID already exists. Use a unique id.", true);
+      return;
+    }
 
-  saveMessages(messages);
-  createForm.reset();
-  keyWarning.hidden = true;
-  setStatus(createStatus, `Message '${id}' encrypted and saved locally.`);
+    await setDoc(messageRef, {
+      id,
+      openText,
+      encryptedText,
+      encryptedLength: secretText.length,
+      createdAt: serverTimestamp(),
+    });
+
+    createForm.reset();
+    keyWarning.hidden = true;
+    setStatus(createStatus, `Message '${id}' encrypted and saved to Firestore.`);
+  } catch (error) {
+    setStatus(createStatus, `Could not save message: ${error.message}`, true);
+  }
 });
 
-searchForm.addEventListener("submit", (event) => {
+searchForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const id = searchForm.searchId.value.trim();
 
-  const found = messages.find((message) => message.id === id);
-  selectedMessage = found || null;
-
-  if (!found) {
-    resultCard.hidden = true;
-    setStatus(searchStatus, "No message found for this id.", true);
+  if (!db) {
+    setStatus(searchStatus, "Firebase is not configured.", true);
     return;
   }
 
-  resultId.textContent = found.id;
-  resultOpen.textContent = found.openText;
-  resultEncrypted.textContent = found.encryptedText;
-  resultDeciphered.textContent = "—";
-  decipherForm.reset();
-  resultCard.hidden = false;
-  setStatus(searchStatus, "Message loaded. Enter key to decipher.");
-  setStatus(decipherStatus, "");
+  const id = searchForm.searchId.value.trim();
+  const messageRef = doc(db, "messages", id);
+
+  try {
+    const snapshot = await getDoc(messageRef);
+
+    if (!snapshot.exists()) {
+      selectedMessage = null;
+      resultCard.hidden = true;
+      setStatus(searchStatus, "No message found for this id.", true);
+      return;
+    }
+
+    const found = snapshot.data();
+    selectedMessage = found;
+
+    resultId.textContent = found.id;
+    resultOpen.textContent = found.openText;
+    resultEncrypted.textContent = found.encryptedText;
+    resultDeciphered.textContent = "—";
+    decipherForm.reset();
+    resultCard.hidden = false;
+    setStatus(searchStatus, "Message loaded. Enter key to decipher.");
+    setStatus(decipherStatus, "");
+  } catch (error) {
+    selectedMessage = null;
+    resultCard.hidden = true;
+    setStatus(searchStatus, `Lookup failed: ${error.message}`, true);
+  }
 });
 
 decipherForm.addEventListener("submit", (event) => {
@@ -166,34 +208,6 @@ function generateRandomKey(length) {
   const bytes = new Uint32Array(length);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (value) => chars[value % chars.length]).join("");
-}
-
-async function loadMessages() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }
-
-  try {
-    const response = await fetch("messages.json");
-    if (!response.ok) {
-      return [];
-    }
-
-    const initial = await response.json();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-    return initial;
-  } catch {
-    return [];
-  }
-}
-
-function saveMessages(nextMessages) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(nextMessages));
 }
 
 function setStatus(target, message, isError = false) {
