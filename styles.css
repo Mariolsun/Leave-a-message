@@ -132,6 +132,20 @@ textarea {
   color: #ffe48b;
 }
 
+.drop-zone {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px dashed var(--border);
+  color: var(--green-dim);
+  text-align: center;
+}
+
+.drop-zone.is-dragging {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(97, 255, 126, 0.08);
+}
+
 .status {
   min-height: 1.4rem;
   font-size: clamp(0.92rem, 2.4vw, 1rem);
