@@ -28,30 +28,62 @@ cp firebase-config.example.js firebase-config.js
 
 ### Suggested Firestore rules
 
-Use rules that allow read + create, and block edits/deletes:
+Use rules that match this app's current schema (`messages` + `inboxCounters`), allow read + create, and block edits/deletes:
 
 ```txt
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /messages/{id} {
+    function isValidInbox(value) {
+      return value is string && value.size() > 0 && value.size() <= 80;
+    }
+
+    match /messages/{messageId} {
       allow read: if true;
 
       allow create: if
         request.resource.data.keys().hasOnly([
-          'id', 'openText', 'encryptedText', 'encryptedLength', 'createdAt'
+          'inbox',
+          'internalId',
+          'openText',
+          'encryptedText',
+          'encryptedLength',
+          'createdAt'
         ]) &&
-        request.resource.data.id == id &&
-        request.resource.data.id is string &&
+        isValidInbox(request.resource.data.inbox) &&
+        request.resource.data.internalId is int &&
+        request.resource.data.internalId > 0 &&
         request.resource.data.openText is string &&
+        request.resource.data.openText.size() <= 5000 &&
         request.resource.data.encryptedText is string &&
-        request.resource.data.encryptedLength is int;
+        request.resource.data.encryptedLength is int &&
+        request.resource.data.encryptedLength >= 0 &&
+        request.resource.data.encryptedLength <= 5000;
 
       allow update, delete: if false;
+    }
+
+    match /inboxCounters/{inboxId} {
+      allow read: if false;
+
+      allow create, update: if
+        inboxId == request.resource.id &&
+        isValidInbox(inboxId) &&
+        request.resource.data.keys().hasOnly(['nextInternalId']) &&
+        request.resource.data.nextInternalId is int &&
+        request.resource.data.nextInternalId > 1 &&
+        (
+          !exists(/databases/$(database)/documents/inboxCounters/$(inboxId)) ||
+          request.resource.data.nextInternalId == resource.data.nextInternalId + 1
+        );
+
+      allow delete: if false;
     }
   }
 }
 ```
+
+> Note: this app now queries inbox messages with `where("inbox", "==", inbox)` and sorts in the browser, so no composite index is required for inbox loading.
 
 ## Run locally
 

@@ -4,7 +4,6 @@ import {
   doc,
   getDocs,
   getFirestore,
-  orderBy,
   query,
   runTransaction,
   serverTimestamp,
@@ -167,16 +166,13 @@ searchForm.addEventListener("submit", async (event) => {
   }
 
   try {
-    const messagesQuery = query(
-      collection(db, "messages"),
-      where("inbox", "==", inbox),
-      orderBy("internalId", "asc")
-    );
+    const messagesQuery = query(collection(db, "messages"), where("inbox", "==", inbox));
     const snapshot = await getDocs(messagesQuery);
 
     foundMessages = snapshot.docs
       .map((entry) => ({ docId: entry.id, ...entry.data() }))
-      .filter(isValidStoredMessage);
+      .filter(isValidStoredMessage)
+      .sort((a, b) => a.internalId - b.internalId);
 
     selectedMessage = null;
     resultCard.hidden = true;
