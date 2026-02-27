@@ -31,10 +31,10 @@ const resultList = document.getElementById("result-list");
 const resultCard = document.getElementById("result");
 const resultOpen = document.getElementById("result-open");
 const resultEncrypted = document.getElementById("result-encrypted");
+const resultTextLabel = document.getElementById("result-text-label");
 
 const decipherForm = document.getElementById("decipher-form");
 const decipherStatus = document.getElementById("decipher-status");
-const resultDeciphered = document.getElementById("result-deciphered");
 
 let selectedMessage = null;
 let foundMessages = [];
@@ -158,7 +158,8 @@ searchForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  const inbox = searchForm.searchInbox.value.trim();
+  const inboxField = searchForm.elements.namedItem("searchInbox");
+  const inbox = inboxField?.value.trim() ?? "";
   if (!INBOX_PATTERN.test(inbox)) {
     resetSearchState();
     setStatus(searchStatus, "Invalid inbox format.", true);
@@ -176,7 +177,7 @@ searchForm.addEventListener("submit", async (event) => {
 
     selectedMessage = null;
     resultCard.hidden = true;
-    resultDeciphered.textContent = "—";
+    resetResultDisplay();
     decipherForm.reset();
     setStatus(decipherStatus, "");
 
@@ -209,8 +210,7 @@ resultList.addEventListener("click", (event) => {
 
   selectedMessage = foundMessages[index];
   resultOpen.textContent = selectedMessage.openText;
-  resultEncrypted.textContent = selectedMessage.encryptedText;
-  resultDeciphered.textContent = "—";
+  showEncryptedText(selectedMessage.encryptedText);
   decipherForm.reset();
   resultCard.hidden = false;
   setStatus(searchStatus, "Message selected. Enter key to decipher.");
@@ -233,12 +233,36 @@ decipherForm.addEventListener("submit", (event) => {
 
   try {
     const deciphered = decrypt(selectedMessage.encryptedText, key);
-    resultDeciphered.textContent = deciphered;
+    showDecryptedText(deciphered);
     setStatus(decipherStatus, "Deciphered locally. Key was not saved.");
   } catch {
     setStatus(decipherStatus, "Could not decipher with the provided key.", true);
   }
 });
+
+
+function resetResultDisplay() {
+  resultTextLabel.textContent = "Encrypted Text:";
+  resultEncrypted.textContent = selectedMessage?.encryptedText ?? "";
+}
+
+function showEncryptedText(encryptedText) {
+  resultTextLabel.textContent = "Encrypted Text:";
+  resultEncrypted.textContent = encryptedText;
+}
+
+function showDecryptedText(text) {
+  resultTextLabel.textContent = "Decrypted Text:";
+  resultEncrypted.textContent = "";
+
+  for (const [index, char] of Array.from(text).entries()) {
+    const span = document.createElement("span");
+    span.className = "decrypted-char";
+    span.style.setProperty("--char-index", String(index));
+    span.textContent = char;
+    resultEncrypted.appendChild(span);
+  }
+}
 
 function renderFoundMessages() {
   resultList.innerHTML = "";
@@ -266,7 +290,7 @@ function resetSearchState() {
   resultList.innerHTML = "";
   resultListCard.hidden = true;
   resultCard.hidden = true;
-  resultDeciphered.textContent = "—";
+  resetResultDisplay();
   decipherForm.reset();
   setStatus(decipherStatus, "");
 }
