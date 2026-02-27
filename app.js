@@ -33,6 +33,8 @@ const decipherStatus = document.getElementById("decipher-status");
 const resultDeciphered = document.getElementById("result-deciphered");
 
 let selectedMessage = null;
+const MAX_MESSAGE_LENGTH = 5000;
+const ID_PATTERN = /^[a-zA-Z0-9._-]{1,80}$/;
 
 init();
 
@@ -82,8 +84,18 @@ createForm.addEventListener("submit", async (event) => {
   const secretText = createForm.secretText.value;
   const key = createForm.key.value;
 
-  if (!id || !openText || !secretText || !key) {
+  if (!id || !secretText || !key) {
     setStatus(createStatus, "All fields are required.", true);
+    return;
+  }
+
+  if (!ID_PATTERN.test(id)) {
+    setStatus(createStatus, "ID must be 1-80 chars using letters, numbers, dot, underscore, or dash.", true);
+    return;
+  }
+
+  if (secretText.length > MAX_MESSAGE_LENGTH || openText.length > MAX_MESSAGE_LENGTH) {
+    setStatus(createStatus, `Messages are limited to ${MAX_MESSAGE_LENGTH} characters.`, true);
     return;
   }
 
@@ -127,6 +139,13 @@ searchForm.addEventListener("submit", async (event) => {
   }
 
   const id = searchForm.searchId.value.trim();
+  if (!ID_PATTERN.test(id)) {
+    selectedMessage = null;
+    resultCard.hidden = true;
+    setStatus(searchStatus, "Invalid ID format.", true);
+    return;
+  }
+
   const messageRef = doc(db, "messages", id);
 
   try {
@@ -140,6 +159,13 @@ searchForm.addEventListener("submit", async (event) => {
     }
 
     const found = snapshot.data();
+    if (!isValidStoredMessage(found)) {
+      selectedMessage = null;
+      resultCard.hidden = true;
+      setStatus(searchStatus, "Stored message data is invalid.", true);
+      return;
+    }
+
     selectedMessage = found;
 
     resultId.textContent = found.id;
@@ -192,6 +218,10 @@ function decrypt(cipherHex, key) {
     throw new Error("Invalid cipher format");
   }
 
+  if (!/^[0-9a-f]+$/i.test(cipherHex)) {
+    throw new Error("Invalid cipher characters");
+  }
+
   const blocks = cipherHex.match(/.{1,4}/g) || [];
   if (blocks.length !== key.length) {
     throw new Error("Key length mismatch");
@@ -213,4 +243,21 @@ function generateRandomKey(length) {
 function setStatus(target, message, isError = false) {
   target.textContent = message;
   target.classList.toggle("error", isError);
+}
+
+function isValidStoredMessage(data) {
+  return (
+    data &&
+    typeof data.id === "string" &&
+    ID_PATTERN.test(data.id) &&
+    typeof data.openText === "string" &&
+    data.openText.length <= MAX_MESSAGE_LENGTH &&
+    typeof data.encryptedText === "string" &&
+    /^[0-9a-f]+$/i.test(data.encryptedText) &&
+    data.encryptedText.length % 4 === 0 &&
+    Number.isInteger(data.encryptedLength) &&
+    data.encryptedLength > 0 &&
+    data.encryptedLength <= MAX_MESSAGE_LENGTH &&
+    data.encryptedText.length === data.encryptedLength * 4
+  );
 }
