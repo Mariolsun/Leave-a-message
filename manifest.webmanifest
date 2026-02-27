@@ -7,5 +7,13 @@
   "background_color": "#050b05",
   "theme_color": "#050b05",
   "description": "One-time pad message vault for leaving and deciphering encrypted messages.",
+  "icons": [
+    {
+      "src": "app-icon.svg",
+      "sizes": "128x128",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
   "orientation": "portrait"
 }

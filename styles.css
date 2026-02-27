@@ -55,6 +55,15 @@ body {
   margin: 0.2rem 0;
   color: var(--green);
   font-size: clamp(1.5rem, 4.2vw, 2.2rem);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.terminal__icon {
+  width: 1.6em;
+  height: 1.6em;
+  flex: 0 0 auto;
 }
 
 .terminal__prompt {
