@@ -70,9 +70,18 @@
           </label>
 
           <div class="actions">
+            <button type="button" id="load-key-file-create">Load Key from File</button>
             <button type="button" id="generate-key">Generate Random Key</button>
             <button type="submit">Encrypt &amp; Save</button>
           </div>
+
+          <input type="file" id="key-file-create" accept=".txt" hidden />
+          <p class="drop-zone" id="drop-zone-create">Drop a .txt key file here</p>
+
+          <label id="start-key-wrapper-create" hidden>
+            Start key from file
+            <select id="start-key-create"></select>
+          </label>
 
           <p id="key-warning" class="warning" hidden>
             Generated key is shown once. Save it now — without it, deciphering is impossible.
@@ -113,7 +122,19 @@
                 placeholder="Enter the original key (or longer)"
               ></textarea>
             </label>
-            <button type="submit">Decipher</button>
+
+            <div class="actions">
+              <button type="button" id="load-key-file-decipher">Load Key from File</button>
+              <button type="submit">Decipher</button>
+            </div>
+
+            <input type="file" id="key-file-decipher" accept=".txt" hidden />
+            <p class="drop-zone" id="drop-zone-decipher">Drop a .txt key file here</p>
+
+            <label id="start-key-wrapper-decipher" hidden>
+              Start key from file
+              <select id="start-key-decipher"></select>
+            </label>
           </form>
         </article>
 

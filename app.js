@@ -23,6 +23,11 @@ const createForm = document.getElementById("create-form");
 const createStatus = document.getElementById("create-status");
 const keyWarning = document.getElementById("key-warning");
 const generateKeyBtn = document.getElementById("generate-key");
+const loadKeyFileCreateBtn = document.getElementById("load-key-file-create");
+const keyFileCreateInput = document.getElementById("key-file-create");
+const dropZoneCreate = document.getElementById("drop-zone-create");
+const startKeyWrapperCreate = document.getElementById("start-key-wrapper-create");
+const startKeyCreateSelect = document.getElementById("start-key-create");
 
 const searchForm = document.getElementById("search-form");
 const searchStatus = document.getElementById("search-status");
@@ -36,11 +41,20 @@ const resultDate = document.getElementById("result-date");
 
 const decipherForm = document.getElementById("decipher-form");
 const decipherStatus = document.getElementById("decipher-status");
+const loadKeyFileDecipherBtn = document.getElementById("load-key-file-decipher");
+const keyFileDecipherInput = document.getElementById("key-file-decipher");
+const dropZoneDecipher = document.getElementById("drop-zone-decipher");
+const startKeyWrapperDecipher = document.getElementById("start-key-wrapper-decipher");
+const startKeyDecipherSelect = document.getElementById("start-key-decipher");
 
 let selectedMessage = null;
 let foundMessages = [];
 const MAX_MESSAGE_LENGTH = 5000;
 const INBOX_PATTERN = /^[a-zA-Z0-9._-]{1,80}$/;
+const FILE_KEY_LINE_PATTERN = /^\s*(\d+)\.(.+)$/;
+
+const loadedCreateKeys = [];
+const loadedDecipherKeys = [];
 
 init();
 
@@ -64,6 +78,26 @@ tabs.forEach((tab) => {
     panels[tab.dataset.tab].classList.add("is-active");
   });
 });
+
+
+
+loadKeyFileCreateBtn.addEventListener("click", () => keyFileCreateInput.click());
+loadKeyFileDecipherBtn.addEventListener("click", () => keyFileDecipherInput.click());
+
+keyFileCreateInput.addEventListener("change", async (event) => {
+  const [file] = event.target.files ?? [];
+  await handleKeyFileLoad(file, "create");
+  keyFileCreateInput.value = "";
+});
+
+keyFileDecipherInput.addEventListener("change", async (event) => {
+  const [file] = event.target.files ?? [];
+  await handleKeyFileLoad(file, "decipher");
+  keyFileDecipherInput.value = "";
+});
+
+setupDropZone(dropZoneCreate, "create");
+setupDropZone(dropZoneDecipher, "decipher");
 
 generateKeyBtn.addEventListener("click", () => {
   const secretTextField = createForm.elements.namedItem("secretText");
@@ -94,10 +128,10 @@ createForm.addEventListener("submit", async (event) => {
   const inbox = inboxField?.value.trim() ?? "";
   const openText = openTextField?.value ?? "";
   const secretText = secretTextField?.value ?? "";
-  const key = keyField?.value ?? "";
+  let key = keyField?.value ?? "";
 
-  if (!inbox || !secretText || !key) {
-    setStatus(createStatus, "Inbox, text-to-encrypt, and key are required.", true);
+  if (!inbox || !secretText) {
+    setStatus(createStatus, "Inbox and text-to-encrypt are required.", true);
     return;
   }
 
@@ -113,6 +147,22 @@ createForm.addEventListener("submit", async (event) => {
   if (secretText.length > MAX_MESSAGE_LENGTH || openText.length > MAX_MESSAGE_LENGTH) {
     setStatus(createStatus, `Messages are limited to ${MAX_MESSAGE_LENGTH} characters.`, true);
     return;
+  }
+
+  if (!key) {
+    const computedKey = buildKeyFromLoadedKeys(
+      loadedCreateKeys,
+      Number.parseInt(startKeyCreateSelect.value, 10),
+      secretText.length
+    );
+
+    if (!computedKey.ok) {
+      setStatus(createStatus, computedKey.message, true);
+      return;
+    }
+
+    key = computedKey.key;
+    createForm.key.value = key;
   }
 
   if (key.length < secretText.length) {
@@ -180,6 +230,7 @@ searchForm.addEventListener("submit", async (event) => {
     resultCard.hidden = true;
     resetResultDisplay();
     decipherForm.reset();
+    startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
     setStatus(decipherStatus, "");
 
     if (!foundMessages.length) {
@@ -227,7 +278,24 @@ decipherForm.addEventListener("submit", (event) => {
     return;
   }
 
-  const key = decipherForm.decipherKey.value;
+  let key = decipherForm.decipherKey.value;
+
+  if (!key) {
+    const computedKey = buildKeyFromLoadedKeys(
+      loadedDecipherKeys,
+      Number.parseInt(startKeyDecipherSelect.value, 10),
+      selectedMessage.encryptedLength
+    );
+
+    if (!computedKey.ok) {
+      setStatus(decipherStatus, computedKey.message, true);
+      return;
+    }
+
+    key = computedKey.key;
+    decipherForm.decipherKey.value = key;
+  }
+
   if (key.length < selectedMessage.encryptedLength) {
     setStatus(decipherStatus, "Key is too short for this encrypted message.", true);
     return;
@@ -420,4 +488,123 @@ function isValidStoredMessage(data) {
     data.encryptedLength <= MAX_MESSAGE_LENGTH &&
     data.encryptedText.length === data.encryptedLength * 4
   );
+}
+
+function setupDropZone(dropZone, mode) {
+  if (!dropZone) {
+    return;
+  }
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      dropZone.classList.add("is-dragging");
+    });
+  });
+
+  ["dragleave", "drop"].forEach((eventName) => {
+    dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      dropZone.classList.remove("is-dragging");
+    });
+  });
+
+  dropZone.addEventListener("drop", async (event) => {
+    const [file] = event.dataTransfer?.files ?? [];
+    await handleKeyFileLoad(file, mode);
+  });
+}
+
+async function handleKeyFileLoad(file, mode) {
+  const statusTarget = mode === "create" ? createStatus : decipherStatus;
+  if (!file) {
+    return;
+  }
+
+  if (!file.name.toLowerCase().endsWith(".txt")) {
+    setStatus(statusTarget, "Key file must have a .txt extension.", true);
+    return;
+  }
+
+  let content = "";
+  try {
+    content = await file.text();
+  } catch {
+    setStatus(statusTarget, "Could not read key file.", true);
+    return;
+  }
+
+  const parsed = parseKeysFromFile(content);
+  if (!parsed.length) {
+    setStatus(
+      statusTarget,
+      "No valid keys found. Use lines like '1.yourKey', separated by empty lines.",
+      true
+    );
+    return;
+  }
+
+  const targetKeys = mode === "create" ? loadedCreateKeys : loadedDecipherKeys;
+  targetKeys.splice(0, targetKeys.length, ...parsed);
+
+  const select = mode === "create" ? startKeyCreateSelect : startKeyDecipherSelect;
+  const wrapper = mode === "create" ? startKeyWrapperCreate : startKeyWrapperDecipher;
+  populateStartKeySelect(select, targetKeys);
+  wrapper.hidden = false;
+
+  setStatus(statusTarget, `Loaded ${parsed.length} keys from ${file.name}.`);
+}
+
+function parseKeysFromFile(text) {
+  return text
+    .split(/\n\s*\n+/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .map((chunk) => {
+      const match = chunk.match(FILE_KEY_LINE_PATTERN);
+      if (!match) {
+        return null;
+      }
+
+      const key = match[2].trim();
+      return key.length ? key : null;
+    })
+    .filter(Boolean);
+}
+
+function populateStartKeySelect(select, keys) {
+  select.innerHTML = "";
+
+  keys.forEach((_, index) => {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = `#${index + 1}`;
+    select.appendChild(option);
+  });
+
+  select.value = "0";
+}
+
+function buildKeyFromLoadedKeys(keys, startIndex, requiredLength) {
+  if (!keys.length) {
+    return { ok: false, message: "Provide a key manually or load a key file first." };
+  }
+
+  if (!Number.isInteger(startIndex) || startIndex < 0 || startIndex >= keys.length) {
+    return { ok: false, message: "Select a valid starting key from the loaded file." };
+  }
+
+  let combined = "";
+  for (let index = startIndex; index < keys.length && combined.length < requiredLength; index += 1) {
+    combined += keys[index];
+  }
+
+  if (combined.length < requiredLength) {
+    return {
+      ok: false,
+      message: "Not enough keys from the selected starting key to process this text.",
+    };
+  }
+
+  return { ok: true, key: combined.slice(0, requiredLength) };
 }
