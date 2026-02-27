@@ -63,9 +63,8 @@
             OTP Key (must be at least secret text length)
             <textarea
               name="key"
-              required
               rows="3"
-              placeholder="Paste or generate a key"
+              placeholder="Paste a key, generate one, or load from file"
             ></textarea>
           </label>
 
@@ -76,7 +75,7 @@
           </div>
 
           <input type="file" id="key-file-create" accept=".txt" hidden />
-          <p class="drop-zone" id="drop-zone-create">Drop a .txt key file here</p>
+          <p class="drop-zone" id="drop-zone-create" role="button" tabindex="0">Drop a .txt key file here or tap to choose</p>
 
           <label id="start-key-wrapper-create" hidden>
             Start key from file
@@ -117,9 +116,8 @@
               OTP Key for Deciphering
               <textarea
                 name="decipherKey"
-                required
                 rows="3"
-                placeholder="Enter the original key (or longer)"
+                placeholder="Enter key manually or load it from file"
               ></textarea>
             </label>
 
@@ -129,7 +127,7 @@
             </div>
 
             <input type="file" id="key-file-decipher" accept=".txt" hidden />
-            <p class="drop-zone" id="drop-zone-decipher">Drop a .txt key file here</p>
+            <p class="drop-zone" id="drop-zone-decipher" role="button" tabindex="0">Drop a .txt key file here or tap to choose</p>
 
             <label id="start-key-wrapper-decipher" hidden>
               Start key from file

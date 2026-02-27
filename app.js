@@ -56,9 +56,26 @@ const FILE_KEY_LINE_PATTERN = /^\s*(\d+)\.(.+)$/;
 const loadedCreateKeys = [];
 const loadedDecipherKeys = [];
 
+
+function openNativeFilePicker(input) {
+  if (!input) {
+    return;
+  }
+
+  if (typeof input.showPicker === "function") {
+    input.showPicker();
+    return;
+  }
+
+  input.click();
+}
+
 init();
 
 function init() {
+  startKeyWrapperCreate.hidden = loadedCreateKeys.length === 0;
+  startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
+
   if (!db) {
     const message =
       "Firebase is not configured. Copy firebase-config.example.js to firebase-config.js and fill values.";
@@ -81,8 +98,8 @@ tabs.forEach((tab) => {
 
 
 
-loadKeyFileCreateBtn.addEventListener("click", () => keyFileCreateInput.click());
-loadKeyFileDecipherBtn.addEventListener("click", () => keyFileDecipherInput.click());
+loadKeyFileCreateBtn.addEventListener("click", () => openNativeFilePicker(keyFileCreateInput));
+loadKeyFileDecipherBtn.addEventListener("click", () => openNativeFilePicker(keyFileDecipherInput));
 
 keyFileCreateInput.addEventListener("change", async (event) => {
   const [file] = event.target.files ?? [];
@@ -99,6 +116,12 @@ keyFileDecipherInput.addEventListener("change", async (event) => {
 setupDropZone(dropZoneCreate, "create");
 setupDropZone(dropZoneDecipher, "decipher");
 
+["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+  document.addEventListener(eventName, (event) => {
+    event.preventDefault();
+  });
+});
+
 generateKeyBtn.addEventListener("click", () => {
   const secretTextField = createForm.elements.namedItem("secretText");
   const secretText = secretTextField?.value ?? "";
@@ -114,6 +137,9 @@ generateKeyBtn.addEventListener("click", () => {
 
 createForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+
+  startKeyWrapperCreate.hidden = loadedCreateKeys.length === 0;
+  startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
 
   if (!db) {
     setStatus(createStatus, "Firebase is not configured.", true);
@@ -195,6 +221,7 @@ createForm.addEventListener("submit", async (event) => {
 
     createForm.reset();
     keyWarning.hidden = true;
+    startKeyWrapperCreate.hidden = loadedCreateKeys.length === 0;
     setStatus(createStatus, `Message saved to inbox '${inbox}' as entry ${assignedMessageNumber}.`);
   } catch (error) {
     setStatus(createStatus, `Could not save message: ${error.message}`, true);
@@ -203,6 +230,9 @@ createForm.addEventListener("submit", async (event) => {
 
 searchForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+
+  startKeyWrapperCreate.hidden = loadedCreateKeys.length === 0;
+  startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
 
   if (!db) {
     setStatus(searchStatus, "Firebase is not configured.", true);
@@ -265,6 +295,7 @@ resultList.addEventListener("click", (event) => {
   resultDate.textContent = formatSelectedMessageTimestamp(selectedMessage.createdAt);
   showEncryptedText(selectedMessage.encryptedText);
   decipherForm.reset();
+  startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
   resultCard.hidden = false;
   setStatus(searchStatus, "Message selected. Enter key to decipher.");
   setStatus(decipherStatus, "");
@@ -425,6 +456,7 @@ function resetSearchState() {
   resultDate.textContent = "";
   resetResultDisplay();
   decipherForm.reset();
+  startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
   setStatus(decipherStatus, "");
 }
 
@@ -495,9 +527,23 @@ function setupDropZone(dropZone, mode) {
     return;
   }
 
+  const input = mode === "create" ? keyFileCreateInput : keyFileDecipherInput;
+
+  dropZone.addEventListener("click", () => openNativeFilePicker(input));
+  dropZone.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openNativeFilePicker(input);
+    }
+  });
+
   ["dragenter", "dragover"].forEach((eventName) => {
     dropZone.addEventListener(eventName, (event) => {
       event.preventDefault();
+      event.stopPropagation();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+      }
       dropZone.classList.add("is-dragging");
     });
   });
@@ -505,6 +551,7 @@ function setupDropZone(dropZone, mode) {
   ["dragleave", "drop"].forEach((eventName) => {
     dropZone.addEventListener(eventName, (event) => {
       event.preventDefault();
+      event.stopPropagation();
       dropZone.classList.remove("is-dragging");
     });
   });
