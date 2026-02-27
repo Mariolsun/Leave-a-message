@@ -105,8 +105,8 @@ createForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (key.length !== secretText.length) {
-    setStatus(createStatus, "Key length must exactly match text-to-encrypt length.", true);
+  if (key.length < secretText.length) {
+    setStatus(createStatus, "Key must be at least as long as text-to-encrypt.", true);
     return;
   }
 
@@ -198,8 +198,8 @@ decipherForm.addEventListener("submit", (event) => {
   }
 
   const key = decipherForm.decipherKey.value;
-  if (key.length !== selectedMessage.encryptedLength) {
-    setStatus(decipherStatus, "Key length mismatch.", true);
+  if (key.length < selectedMessage.encryptedLength) {
+    setStatus(decipherStatus, "Key is too short for this encrypted message.", true);
     return;
   }
 
@@ -229,8 +229,8 @@ function decrypt(cipherHex, key) {
   }
 
   const blocks = cipherHex.match(/.{1,4}/g) || [];
-  if (blocks.length !== key.length) {
-    throw new Error("Key length mismatch");
+  if (blocks.length > key.length) {
+    throw new Error("Key too short");
   }
 
   return blocks

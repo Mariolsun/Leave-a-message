@@ -54,7 +54,7 @@
           </label>
 
           <label>
-            OTP Key (must match secret text length)
+            OTP Key (must be at least secret text length)
             <textarea
               name="key"
               required
@@ -98,7 +98,7 @@
                 name="decipherKey"
                 required
                 rows="3"
-                placeholder="Enter the exact key"
+                placeholder="Enter the original key (or longer)"
               ></textarea>
             </label>
             <button type="submit">Decipher</button>
