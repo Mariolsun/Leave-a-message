@@ -31,7 +31,10 @@ service cloud.firestore {
     }
 
     match /inboxCounters/{inboxId} {
-      allow read: if false;
+      // Message creation uses a transaction that reads the counter first,
+      // so we must allow get() on the counter document.
+      allow get: if isValidInbox(inboxId);
+      allow list: if false;
 
       allow create, update: if
         inboxId == request.resource.id &&
