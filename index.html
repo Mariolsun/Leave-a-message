@@ -30,8 +30,8 @@
       <section class="panel is-active" id="panel-create">
         <form id="create-form" autocomplete="off">
           <label>
-            Message ID
-            <input name="id" required maxlength="80" placeholder="e.g. operation-neon" />
+            Inbox Name
+            <input name="inbox" required maxlength="80" placeholder="e.g. operation-neon" />
           </label>
 
           <label>
@@ -65,7 +65,7 @@
 
           <div class="actions">
             <button type="button" id="generate-key">Generate Random Key</button>
-            <button type="submit">Encrypt &amp; Save Message</button>
+            <button type="submit">Encrypt &amp; Save Message to Inbox</button>
           </div>
 
           <p id="key-warning" class="warning" hidden>
@@ -79,15 +79,20 @@
       <section class="panel" id="panel-find">
         <form id="search-form" autocomplete="off">
           <label>
-            Message ID
-            <input name="searchId" required maxlength="80" placeholder="Find by id" />
+            Inbox Name
+            <input name="searchInbox" required maxlength="80" placeholder="Find by inbox name" />
           </label>
-          <button type="submit">Find Message</button>
+          <button type="submit">Load Inbox</button>
         </form>
 
+        <article id="search-results" class="result" hidden>
+          <h2>Inbox Messages</h2>
+          <p>Select a message to view and decipher it:</p>
+          <ul id="result-list" class="message-list"></ul>
+        </article>
+
         <article id="result" class="result" hidden>
-          <h2>Message Found</h2>
-          <p><strong>ID:</strong> <span id="result-id"></span></p>
+          <h2>Selected Message</h2>
           <p><strong>Open Text:</strong> <span id="result-open"></span></p>
           <p><strong>Encrypted Text:</strong> <code id="result-encrypted"></code></p>
 
