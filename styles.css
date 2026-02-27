@@ -17,6 +17,7 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   font-family: "Courier New", Courier, monospace;
+  font-size: 18px;
   color: var(--text);
   background: radial-gradient(circle at top, #0b1e0f 0, var(--bg) 55%);
   display: grid;
@@ -49,16 +50,18 @@ body {
 .terminal__header h1 {
   margin: 0.2rem 0;
   color: var(--green);
-  font-size: clamp(1.2rem, 3vw, 1.8rem);
+  font-size: clamp(1.5rem, 4.2vw, 2.2rem);
 }
 
 .terminal__prompt {
   margin: 0;
   color: var(--green-dim);
+  font-size: clamp(0.95rem, 2.3vw, 1.1rem);
 }
 
 .terminal__note {
   margin: 0.4rem 0 1rem;
+  font-size: clamp(0.95rem, 2.4vw, 1.08rem);
 }
 
 .tabs {
@@ -72,7 +75,8 @@ button {
   border: 1px solid var(--border);
   background: #0d1b0e;
   color: var(--green);
-  padding: 0.55rem 0.8rem;
+  padding: 0.65rem 0.9rem;
+  font-size: clamp(0.95rem, 2.7vw, 1.05rem);
   cursor: pointer;
   font-family: inherit;
   -webkit-user-select: none;
@@ -101,6 +105,7 @@ form {
 label {
   display: grid;
   gap: 0.4rem;
+  font-size: clamp(0.95rem, 2.6vw, 1.06rem);
 }
 
 input,
@@ -129,12 +134,14 @@ textarea {
 
 .status {
   min-height: 1.4rem;
+  font-size: clamp(0.92rem, 2.4vw, 1rem);
 }
 
 .result {
   margin-top: 1rem;
   padding-top: 0.8rem;
   border-top: 1px dashed var(--border);
+  font-size: clamp(0.95rem, 2.5vw, 1.06rem);
 }
 
 code {
@@ -181,12 +188,26 @@ code {
 }
 
 @media (max-width: 640px) {
+  body {
+    font-size: 19px;
+  }
+
   .terminal {
     max-width: 100vw;
     min-height: 100vh;
-    padding: 1rem;
+    padding: 1.1rem;
     border-left: 0;
     border-right: 0;
+  }
+
+  .tabs {
+    gap: 0.45rem;
+  }
+
+  .tab,
+  button {
+    padding: 0.7rem 0.72rem;
+    letter-spacing: 0.01em;
   }
 }
 

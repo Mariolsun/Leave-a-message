@@ -13,7 +13,7 @@
       content="default-src 'self'; script-src 'self' https://www.gstatic.com; connect-src 'self' https://firestore.googleapis.com https://*.googleapis.com https://*.firebaseio.com; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     />
     <meta name="referrer" content="no-referrer" />
-    <title>Leave a Message // OTP Terminal</title>
+    <title>Leave a Message // OTP Vault</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -22,14 +22,14 @@
     <main class="terminal">
       <header class="terminal__header">
         <p class="terminal__prompt">root@otp-node:~$ ./leave-a-message</p>
-        <h1>One-Time Pad Message Vault</h1>
+        <h1>OTP Message Vault</h1>
         <p class="terminal__note">
           Keys are never stored. Decryption happens only in your browser.
         </p>
       </header>
 
       <section class="tabs" aria-label="Application sections">
-        <button class="tab is-active" data-tab="create">Leave Message</button>
+        <button class="tab is-active" data-tab="create">Leave Msg</button>
         <button class="tab" data-tab="find">Find &amp; Decipher</button>
       </section>
 
@@ -71,7 +71,7 @@
 
           <div class="actions">
             <button type="button" id="generate-key">Generate Random Key</button>
-            <button type="submit">Encrypt &amp; Save Message to Inbox</button>
+            <button type="submit">Encrypt &amp; Save</button>
           </div>
 
           <p id="key-warning" class="warning" hidden>
@@ -88,7 +88,7 @@
             Inbox Name
             <input name="searchInbox" required maxlength="80" placeholder="Find by inbox name" />
           </label>
-          <button type="submit" id="load-inbox">Load Inbox</button>
+          <button type="submit" id="load-inbox">Load</button>
         </form>
 
         <article id="search-results" class="result" hidden>
