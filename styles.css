@@ -20,7 +20,7 @@ body {
   background: radial-gradient(circle at top, #0b1e0f 0, var(--bg) 55%);
   display: grid;
   place-items: center;
-  padding: 1.5rem;
+  padding: 0;
 }
 
 .scanline {
@@ -37,7 +37,8 @@ body {
 }
 
 .terminal {
-  width: min(920px, 100%);
+  width: 100%;
+  max-width: 920px;
   border: 1px solid var(--border);
   background: linear-gradient(180deg, #070d07, var(--bg-panel));
   padding: 1.25rem;
@@ -108,6 +109,7 @@ textarea {
   color: var(--text);
   padding: 0.6rem;
   font-family: inherit;
+  font-size: 16px;
 }
 
 textarea {
@@ -170,5 +172,19 @@ code {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+#result-encrypted {
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .terminal {
+    max-width: 100vw;
+    min-height: 100vh;
+    padding: 1rem;
+    border-left: 0;
+    border-right: 0;
   }
 }
