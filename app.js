@@ -56,6 +56,11 @@ const FILE_KEY_LINE_PATTERN = /^\s*(\d+)\.(.+)$/;
 const loadedCreateKeys = [];
 const loadedDecipherKeys = [];
 
+const KEY_MASK_DELAY_MS = 1000;
+const keyMaskStates = new WeakMap();
+const createKeyField = createForm.elements.namedItem("key");
+const decipherKeyField = decipherForm.elements.namedItem("decipherKey");
+
 
 function openNativeFilePicker(input) {
   if (!input) {
@@ -115,6 +120,8 @@ keyFileDecipherInput.addEventListener("change", async (event) => {
 
 setupDropZone(dropZoneCreate, "create");
 setupDropZone(dropZoneDecipher, "decipher");
+setupDelayedKeyMask(createKeyField);
+setupDelayedKeyMask(decipherKeyField);
 
 ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
   document.addEventListener(eventName, (event) => {
@@ -130,7 +137,7 @@ generateKeyBtn.addEventListener("click", () => {
     return;
   }
 
-  createForm.key.value = generateRandomKey(secretText.length);
+  setKeyFieldValue(createKeyField, generateRandomKey(secretText.length));
   keyWarning.hidden = false;
   setStatus(createStatus, `Random key generated (${secretText.length} chars).`);
 });
@@ -154,7 +161,7 @@ createForm.addEventListener("submit", async (event) => {
   const inbox = inboxField?.value.trim() ?? "";
   const openText = openTextField?.value ?? "";
   const secretText = secretTextField?.value ?? "";
-  let key = keyField?.value ?? "";
+  let key = getKeyFieldValue(keyField);
 
   if (!inbox || !secretText) {
     setStatus(createStatus, "Inbox and text-to-encrypt are required.", true);
@@ -188,7 +195,7 @@ createForm.addEventListener("submit", async (event) => {
     }
 
     key = computedKey.key;
-    createForm.key.value = key;
+    setKeyFieldValue(keyField, key);
   }
 
   if (key.length < secretText.length) {
@@ -220,6 +227,7 @@ createForm.addEventListener("submit", async (event) => {
     });
 
     createForm.reset();
+    setKeyFieldValue(keyField, "", false);
     keyWarning.hidden = true;
     startKeyWrapperCreate.hidden = loadedCreateKeys.length === 0;
     setStatus(createStatus, `Message saved to inbox '${inbox}' as entry ${assignedMessageNumber}.`);
@@ -260,6 +268,7 @@ searchForm.addEventListener("submit", async (event) => {
     resultCard.hidden = true;
     resetResultDisplay();
     decipherForm.reset();
+    setKeyFieldValue(decipherKeyField, "", false);
     startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
     setStatus(decipherStatus, "");
 
@@ -295,6 +304,7 @@ resultList.addEventListener("click", (event) => {
   resultDate.textContent = formatSelectedMessageTimestamp(selectedMessage.createdAt);
   showEncryptedText(selectedMessage.encryptedText);
   decipherForm.reset();
+  setKeyFieldValue(decipherKeyField, "", false);
   startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
   resultCard.hidden = false;
   setStatus(searchStatus, "Message selected. Enter key to decipher.");
@@ -309,7 +319,7 @@ decipherForm.addEventListener("submit", (event) => {
     return;
   }
 
-  let key = decipherForm.decipherKey.value;
+  let key = getKeyFieldValue(decipherKeyField);
 
   if (!key) {
     const computedKey = buildKeyFromLoadedKeys(
@@ -324,7 +334,7 @@ decipherForm.addEventListener("submit", (event) => {
     }
 
     key = computedKey.key;
-    decipherForm.decipherKey.value = key;
+    setKeyFieldValue(decipherKeyField, key);
   }
 
   if (key.length < selectedMessage.encryptedLength) {
@@ -456,6 +466,7 @@ function resetSearchState() {
   resultDate.textContent = "";
   resetResultDisplay();
   decipherForm.reset();
+  setKeyFieldValue(decipherKeyField, "", false);
   startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
   setStatus(decipherStatus, "");
 }
@@ -520,6 +531,98 @@ function isValidStoredMessage(data) {
     data.encryptedLength <= MAX_MESSAGE_LENGTH &&
     data.encryptedText.length === data.encryptedLength * 4
   );
+}
+
+function setupDelayedKeyMask(field) {
+  if (!field) {
+    return;
+  }
+
+  const state = { rawValue: "", timerId: null, isMasked: false };
+  keyMaskStates.set(field, state);
+
+  field.addEventListener("input", () => {
+    state.rawValue = field.value;
+    state.isMasked = false;
+    scheduleKeyMask(field, state);
+  });
+
+  field.addEventListener("focus", () => {
+    revealKeyField(field, state);
+  });
+
+  field.addEventListener("blur", () => {
+    scheduleKeyMask(field, state);
+  });
+}
+
+function scheduleKeyMask(field, state) {
+  if (state.timerId) {
+    clearTimeout(state.timerId);
+    state.timerId = null;
+  }
+
+  if (!state.rawValue.length) {
+    field.value = "";
+    state.isMasked = false;
+    return;
+  }
+
+  state.timerId = setTimeout(() => {
+    field.value = "*".repeat(state.rawValue.length);
+    state.isMasked = true;
+    state.timerId = null;
+  }, KEY_MASK_DELAY_MS);
+}
+
+function revealKeyField(field, state) {
+  if (state.timerId) {
+    clearTimeout(state.timerId);
+    state.timerId = null;
+  }
+
+  if (state.isMasked) {
+    field.value = state.rawValue;
+    state.isMasked = false;
+  }
+}
+
+function setKeyFieldValue(field, value, maskAfterDelay = true) {
+  if (!field) {
+    return;
+  }
+
+  const state = keyMaskStates.get(field);
+  if (!state) {
+    field.value = value;
+    return;
+  }
+
+  if (state.timerId) {
+    clearTimeout(state.timerId);
+    state.timerId = null;
+  }
+
+  state.rawValue = value;
+  state.isMasked = false;
+  field.value = value;
+
+  if (maskAfterDelay) {
+    scheduleKeyMask(field, state);
+  }
+}
+
+function getKeyFieldValue(field) {
+  if (!field) {
+    return "";
+  }
+
+  const state = keyMaskStates.get(field);
+  if (!state) {
+    return field.value ?? "";
+  }
+
+  return state.rawValue;
 }
 
 function setupDropZone(dropZone, mode) {
