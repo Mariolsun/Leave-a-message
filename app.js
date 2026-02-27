@@ -80,6 +80,8 @@ init();
 function init() {
   startKeyWrapperCreate.hidden = loadedCreateKeys.length === 0;
   startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
+  syncKeyFieldMode("create");
+  syncKeyFieldMode("decipher");
 
   if (!db) {
     const message =
@@ -138,6 +140,7 @@ generateKeyBtn.addEventListener("click", () => {
   }
 
   setKeyFieldValue(createKeyField, generateRandomKey(secretText.length));
+  syncKeyFieldMode("create", false);
   keyWarning.hidden = false;
   setStatus(createStatus, `Random key generated (${secretText.length} chars).`);
 });
@@ -161,7 +164,7 @@ createForm.addEventListener("submit", async (event) => {
   const inbox = inboxField?.value.trim() ?? "";
   const openText = openTextField?.value ?? "";
   const secretText = secretTextField?.value ?? "";
-  let key = getKeyFieldValue(keyField);
+  let key = "";
 
   if (!inbox || !secretText) {
     setStatus(createStatus, "Inbox and text-to-encrypt are required.", true);
@@ -182,7 +185,7 @@ createForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (!key) {
+  if (loadedCreateKeys.length > 0) {
     const computedKey = buildKeyFromLoadedKeys(
       loadedCreateKeys,
       Number.parseInt(startKeyCreateSelect.value, 10),
@@ -196,6 +199,8 @@ createForm.addEventListener("submit", async (event) => {
 
     key = computedKey.key;
     setKeyFieldValue(keyField, key);
+  } else {
+    key = getKeyFieldValue(keyField);
   }
 
   if (key.length < secretText.length) {
@@ -228,6 +233,7 @@ createForm.addEventListener("submit", async (event) => {
 
     createForm.reset();
     setKeyFieldValue(keyField, "", false);
+    syncKeyFieldMode("create");
     keyWarning.hidden = true;
     startKeyWrapperCreate.hidden = loadedCreateKeys.length === 0;
     setStatus(createStatus, `Message saved to inbox '${inbox}' as entry ${assignedMessageNumber}.`);
@@ -269,6 +275,7 @@ searchForm.addEventListener("submit", async (event) => {
     resetResultDisplay();
     decipherForm.reset();
     setKeyFieldValue(decipherKeyField, "", false);
+    syncKeyFieldMode("decipher");
     startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
     setStatus(decipherStatus, "");
 
@@ -305,6 +312,7 @@ resultList.addEventListener("click", (event) => {
   showEncryptedText(selectedMessage.encryptedText);
   decipherForm.reset();
   setKeyFieldValue(decipherKeyField, "", false);
+  syncKeyFieldMode("decipher");
   startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
   resultCard.hidden = false;
   setStatus(searchStatus, "Message selected. Enter key to decipher.");
@@ -319,9 +327,9 @@ decipherForm.addEventListener("submit", (event) => {
     return;
   }
 
-  let key = getKeyFieldValue(decipherKeyField);
+  let key = "";
 
-  if (!key) {
+  if (loadedDecipherKeys.length > 0) {
     const computedKey = buildKeyFromLoadedKeys(
       loadedDecipherKeys,
       Number.parseInt(startKeyDecipherSelect.value, 10),
@@ -335,6 +343,8 @@ decipherForm.addEventListener("submit", (event) => {
 
     key = computedKey.key;
     setKeyFieldValue(decipherKeyField, key);
+  } else {
+    key = getKeyFieldValue(decipherKeyField);
   }
 
   if (key.length < selectedMessage.encryptedLength) {
@@ -467,6 +477,7 @@ function resetSearchState() {
   resetResultDisplay();
   decipherForm.reset();
   setKeyFieldValue(decipherKeyField, "", false);
+  syncKeyFieldMode("decipher");
   startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
   setStatus(decipherStatus, "");
 }
@@ -699,10 +710,26 @@ async function handleKeyFileLoad(file, mode) {
 
   const select = mode === "create" ? startKeyCreateSelect : startKeyDecipherSelect;
   const wrapper = mode === "create" ? startKeyWrapperCreate : startKeyWrapperDecipher;
+  const keyField = mode === "create" ? createKeyField : decipherKeyField;
+
+  setKeyFieldValue(keyField, "", false);
   populateStartKeySelect(select, targetKeys);
+  syncKeyFieldMode(mode, true);
   wrapper.hidden = false;
 
   setStatus(statusTarget, `Loaded ${parsed.length} keys from ${file.name}.`);
+}
+
+function syncKeyFieldMode(mode, useLoadedKeys = null) {
+  const keyField = mode === "create" ? createKeyField : decipherKeyField;
+  const loadedKeys = mode === "create" ? loadedCreateKeys : loadedDecipherKeys;
+  const shouldUseLoadedKeys = useLoadedKeys ?? loadedKeys.length > 0;
+
+  if (!keyField) {
+    return;
+  }
+
+  keyField.disabled = shouldUseLoadedKeys;
 }
 
 function parseKeysFromFile(text) {
