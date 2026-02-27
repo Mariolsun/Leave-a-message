@@ -84,7 +84,7 @@ createForm.addEventListener("submit", async (event) => {
   const secretText = createForm.secretText.value;
   const key = createForm.key.value;
 
-  if (!id || !openText || !secretText || !key) {
+  if (!id || !secretText || !key) {
     setStatus(createStatus, "All fields are required.", true);
     return;
   }
