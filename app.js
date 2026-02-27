@@ -24,6 +24,7 @@ const createStatus = document.getElementById("create-status");
 const keyWarning = document.getElementById("key-warning");
 const generateKeyBtn = document.getElementById("generate-key");
 const loadKeyFileCreateBtn = document.getElementById("load-key-file-create");
+const discardKeyFileCreateBtn = document.getElementById("discard-key-file-create");
 const keyFileCreateInput = document.getElementById("key-file-create");
 const dropZoneCreate = document.getElementById("drop-zone-create");
 const startKeyWrapperCreate = document.getElementById("start-key-wrapper-create");
@@ -42,6 +43,7 @@ const resultDate = document.getElementById("result-date");
 const decipherForm = document.getElementById("decipher-form");
 const decipherStatus = document.getElementById("decipher-status");
 const loadKeyFileDecipherBtn = document.getElementById("load-key-file-decipher");
+const discardKeyFileDecipherBtn = document.getElementById("discard-key-file-decipher");
 const keyFileDecipherInput = document.getElementById("key-file-decipher");
 const dropZoneDecipher = document.getElementById("drop-zone-decipher");
 const startKeyWrapperDecipher = document.getElementById("start-key-wrapper-decipher");
@@ -82,6 +84,8 @@ function init() {
   startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
   syncKeyFieldMode("create");
   syncKeyFieldMode("decipher");
+  syncDiscardKeyButton("create");
+  syncDiscardKeyButton("decipher");
 
   if (!db) {
     const message =
@@ -107,6 +111,8 @@ tabs.forEach((tab) => {
 
 loadKeyFileCreateBtn.addEventListener("click", () => openNativeFilePicker(keyFileCreateInput));
 loadKeyFileDecipherBtn.addEventListener("click", () => openNativeFilePicker(keyFileDecipherInput));
+discardKeyFileCreateBtn.addEventListener("click", () => discardLoadedKeys("create"));
+discardKeyFileDecipherBtn.addEventListener("click", () => discardLoadedKeys("decipher"));
 
 keyFileCreateInput.addEventListener("change", async (event) => {
   const [file] = event.target.files ?? [];
@@ -234,6 +240,7 @@ createForm.addEventListener("submit", async (event) => {
     createForm.reset();
     setKeyFieldValue(keyField, "", false);
     syncKeyFieldMode("create");
+    syncDiscardKeyButton("create");
     keyWarning.hidden = true;
     startKeyWrapperCreate.hidden = loadedCreateKeys.length === 0;
     setStatus(createStatus, `Message saved to inbox '${inbox}' as entry ${assignedMessageNumber}.`);
@@ -276,6 +283,7 @@ searchForm.addEventListener("submit", async (event) => {
     decipherForm.reset();
     setKeyFieldValue(decipherKeyField, "", false);
     syncKeyFieldMode("decipher");
+    syncDiscardKeyButton("decipher");
     startKeyWrapperDecipher.hidden = loadedDecipherKeys.length === 0;
     setStatus(decipherStatus, "");
 
@@ -715,6 +723,7 @@ async function handleKeyFileLoad(file, mode) {
   setKeyFieldValue(keyField, "", false);
   populateStartKeySelect(select, targetKeys);
   syncKeyFieldMode(mode, true);
+  syncDiscardKeyButton(mode);
   wrapper.hidden = false;
 
   setStatus(statusTarget, `Loaded ${parsed.length} keys from ${file.name}.`);
@@ -730,6 +739,32 @@ function syncKeyFieldMode(mode, useLoadedKeys = null) {
   }
 
   keyField.disabled = shouldUseLoadedKeys;
+}
+
+
+function discardLoadedKeys(mode) {
+  const targetKeys = mode === "create" ? loadedCreateKeys : loadedDecipherKeys;
+  const keyField = mode === "create" ? createKeyField : decipherKeyField;
+  const wrapper = mode === "create" ? startKeyWrapperCreate : startKeyWrapperDecipher;
+  const statusTarget = mode === "create" ? createStatus : decipherStatus;
+
+  targetKeys.splice(0, targetKeys.length);
+  wrapper.hidden = true;
+  setKeyFieldValue(keyField, "", false);
+  syncKeyFieldMode(mode, false);
+  syncDiscardKeyButton(mode);
+  setStatus(statusTarget, "Loaded key file discarded. You can enter key manually or load another file.");
+}
+
+function syncDiscardKeyButton(mode) {
+  const button = mode === "create" ? discardKeyFileCreateBtn : discardKeyFileDecipherBtn;
+  const loadedKeys = mode === "create" ? loadedCreateKeys : loadedDecipherKeys;
+
+  if (!button) {
+    return;
+  }
+
+  button.hidden = loadedKeys.length === 0;
 }
 
 function parseKeysFromFile(text) {
