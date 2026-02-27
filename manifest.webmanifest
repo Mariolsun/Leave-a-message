@@ -1,0 +1,11 @@
+{
+  "name": "Leave a Message",
+  "short_name": "Message Vault",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#050b05",
+  "theme_color": "#050b05",
+  "description": "One-time pad message vault for leaving and deciphering encrypted messages.",
+  "orientation": "portrait"
+}
