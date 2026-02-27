@@ -131,6 +131,12 @@ setupDropZone(dropZoneDecipher, "decipher");
 setupDelayedKeyMask(createKeyField);
 setupDelayedKeyMask(decipherKeyField);
 
+createKeyField?.addEventListener("input", () => {
+  if (!getKeyFieldValue(createKeyField).length) {
+    keyWarning.hidden = true;
+  }
+});
+
 ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
   document.addEventListener(eventName, (event) => {
     event.preventDefault();
@@ -721,6 +727,9 @@ async function handleKeyFileLoad(file, mode) {
   const keyField = mode === "create" ? createKeyField : decipherKeyField;
 
   setKeyFieldValue(keyField, "", false);
+  if (mode === "create") {
+    keyWarning.hidden = true;
+  }
   populateStartKeySelect(select, targetKeys);
   syncKeyFieldMode(mode, true);
   syncDiscardKeyButton(mode);
