@@ -1,10 +1,14 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
+  collection,
   doc,
-  getDoc,
+  getDocs,
   getFirestore,
+  orderBy,
+  query,
+  runTransaction,
   serverTimestamp,
-  setDoc,
+  where,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const FIREBASE_CONFIG = globalThis.FIREBASE_CONFIG;
@@ -23,8 +27,9 @@ const generateKeyBtn = document.getElementById("generate-key");
 
 const searchForm = document.getElementById("search-form");
 const searchStatus = document.getElementById("search-status");
+const resultListCard = document.getElementById("search-results");
+const resultList = document.getElementById("result-list");
 const resultCard = document.getElementById("result");
-const resultId = document.getElementById("result-id");
 const resultOpen = document.getElementById("result-open");
 const resultEncrypted = document.getElementById("result-encrypted");
 
@@ -33,8 +38,9 @@ const decipherStatus = document.getElementById("decipher-status");
 const resultDeciphered = document.getElementById("result-deciphered");
 
 let selectedMessage = null;
+let foundMessages = [];
 const MAX_MESSAGE_LENGTH = 5000;
-const ID_PATTERN = /^[a-zA-Z0-9._-]{1,80}$/;
+const INBOX_PATTERN = /^[a-zA-Z0-9._-]{1,80}$/;
 
 init();
 
@@ -80,23 +86,27 @@ createForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  const idField = createForm.elements.namedItem("id");
+  const inboxField = createForm.elements.namedItem("inbox");
   const openTextField = createForm.elements.namedItem("openText");
   const secretTextField = createForm.elements.namedItem("secretText");
   const keyField = createForm.elements.namedItem("key");
 
-  const id = idField?.value.trim() ?? "";
+  const inbox = inboxField?.value.trim() ?? "";
   const openText = openTextField?.value ?? "";
   const secretText = secretTextField?.value ?? "";
   const key = keyField?.value ?? "";
 
-  if (!id || !secretText || !key) {
-    setStatus(createStatus, "All fields are required.", true);
+  if (!inbox || !secretText || !key) {
+    setStatus(createStatus, "Inbox, text-to-encrypt, and key are required.", true);
     return;
   }
 
-  if (!ID_PATTERN.test(id)) {
-    setStatus(createStatus, "ID must be 1-80 chars using letters, numbers, dot, underscore, or dash.", true);
+  if (!INBOX_PATTERN.test(inbox)) {
+    setStatus(
+      createStatus,
+      "Inbox must be 1-80 chars using letters, numbers, dot, underscore, or dash.",
+      true
+    );
     return;
   }
 
@@ -113,24 +123,29 @@ createForm.addEventListener("submit", async (event) => {
   const encryptedText = encrypt(secretText, key);
 
   try {
-    const messageRef = doc(db, "messages", id);
-    const existing = await getDoc(messageRef);
-    if (existing.exists()) {
-      setStatus(createStatus, "ID already exists. Use a unique id.", true);
-      return;
-    }
+    const counterRef = doc(db, "inboxCounters", inbox);
+    const messageRef = doc(collection(db, "messages"));
 
-    await setDoc(messageRef, {
-      id,
-      openText,
-      encryptedText,
-      encryptedLength: secretText.length,
-      createdAt: serverTimestamp(),
+    const assignedMessageNumber = await runTransaction(db, async (transaction) => {
+      const counterSnapshot = await transaction.get(counterRef);
+      const nextInternalId = sanitizeNextInternalId(counterSnapshot.data()?.nextInternalId);
+
+      transaction.set(counterRef, { nextInternalId: nextInternalId + 1 }, { merge: true });
+      transaction.set(messageRef, {
+        inbox,
+        internalId: nextInternalId,
+        openText,
+        encryptedText,
+        encryptedLength: secretText.length,
+        createdAt: serverTimestamp(),
+      });
+
+      return nextInternalId;
     });
 
     createForm.reset();
     keyWarning.hidden = true;
-    setStatus(createStatus, `Message '${id}' encrypted and saved to Firestore.`);
+    setStatus(createStatus, `Message saved to inbox '${inbox}' as entry ${assignedMessageNumber}.`);
   } catch (error) {
     setStatus(createStatus, `Could not save message: ${error.message}`, true);
   }
@@ -144,56 +159,73 @@ searchForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  const id = searchForm.searchId.value.trim();
-  if (!ID_PATTERN.test(id)) {
-    selectedMessage = null;
-    resultCard.hidden = true;
-    setStatus(searchStatus, "Invalid ID format.", true);
+  const inbox = searchForm.searchInbox.value.trim();
+  if (!INBOX_PATTERN.test(inbox)) {
+    resetSearchState();
+    setStatus(searchStatus, "Invalid inbox format.", true);
     return;
   }
 
-  const messageRef = doc(db, "messages", id);
-
   try {
-    const snapshot = await getDoc(messageRef);
+    const messagesQuery = query(
+      collection(db, "messages"),
+      where("inbox", "==", inbox),
+      orderBy("internalId", "asc")
+    );
+    const snapshot = await getDocs(messagesQuery);
 
-    if (!snapshot.exists()) {
-      selectedMessage = null;
-      resultCard.hidden = true;
-      setStatus(searchStatus, "No message found for this id.", true);
-      return;
-    }
+    foundMessages = snapshot.docs
+      .map((entry) => ({ docId: entry.id, ...entry.data() }))
+      .filter(isValidStoredMessage);
 
-    const found = snapshot.data();
-    if (!isValidStoredMessage(found)) {
-      selectedMessage = null;
-      resultCard.hidden = true;
-      setStatus(searchStatus, "Stored message data is invalid.", true);
-      return;
-    }
-
-    selectedMessage = found;
-
-    resultId.textContent = found.id;
-    resultOpen.textContent = found.openText;
-    resultEncrypted.textContent = found.encryptedText;
-    resultDeciphered.textContent = "—";
-    decipherForm.reset();
-    resultCard.hidden = false;
-    setStatus(searchStatus, "Message loaded. Enter key to decipher.");
-    setStatus(decipherStatus, "");
-  } catch (error) {
     selectedMessage = null;
     resultCard.hidden = true;
+    resultDeciphered.textContent = "—";
+    decipherForm.reset();
+    setStatus(decipherStatus, "");
+
+    if (!foundMessages.length) {
+      resultListCard.hidden = true;
+      setStatus(searchStatus, "No messages found for this inbox.", true);
+      return;
+    }
+
+    renderFoundMessages();
+    resultListCard.hidden = false;
+    setStatus(searchStatus, `Inbox '${inbox}' loaded (${foundMessages.length} messages).`);
+  } catch (error) {
+    resetSearchState();
     setStatus(searchStatus, `Lookup failed: ${error.message}`, true);
   }
+});
+
+resultList.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-message-index]");
+  if (!button) {
+    return;
+  }
+
+  const index = Number.parseInt(button.dataset.messageIndex ?? "", 10);
+  if (!Number.isInteger(index) || index < 0 || index >= foundMessages.length) {
+    setStatus(searchStatus, "Could not open selected message.", true);
+    return;
+  }
+
+  selectedMessage = foundMessages[index];
+  resultOpen.textContent = selectedMessage.openText;
+  resultEncrypted.textContent = selectedMessage.encryptedText;
+  resultDeciphered.textContent = "—";
+  decipherForm.reset();
+  resultCard.hidden = false;
+  setStatus(searchStatus, "Message selected. Enter key to decipher.");
+  setStatus(decipherStatus, "");
 });
 
 decipherForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
   if (!selectedMessage) {
-    setStatus(decipherStatus, "Find a message first.", true);
+    setStatus(decipherStatus, "Select a message from inbox first.", true);
     return;
   }
 
@@ -211,6 +243,41 @@ decipherForm.addEventListener("submit", (event) => {
     setStatus(decipherStatus, "Could not decipher with the provided key.", true);
   }
 });
+
+function renderFoundMessages() {
+  resultList.innerHTML = "";
+
+  foundMessages.forEach((message, index) => {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.messageIndex = String(index);
+    button.textContent = buildMessageLabel(message, index);
+    item.appendChild(button);
+    resultList.appendChild(item);
+  });
+}
+
+function buildMessageLabel(message, index) {
+  const preview = message.openText.trim() || "[No open text]";
+  const shortened = preview.length > 60 ? `${preview.slice(0, 60)}…` : preview;
+  return `Message ${index + 1}: ${shortened}`;
+}
+
+function resetSearchState() {
+  foundMessages = [];
+  selectedMessage = null;
+  resultList.innerHTML = "";
+  resultListCard.hidden = true;
+  resultCard.hidden = true;
+  resultDeciphered.textContent = "—";
+  decipherForm.reset();
+  setStatus(decipherStatus, "");
+}
+
+function sanitizeNextInternalId(value) {
+  return Number.isInteger(value) && value > 0 ? value : 1;
+}
 
 function encrypt(text, key) {
   return text
@@ -254,8 +321,10 @@ function setStatus(target, message, isError = false) {
 function isValidStoredMessage(data) {
   return (
     data &&
-    typeof data.id === "string" &&
-    ID_PATTERN.test(data.id) &&
+    typeof data.inbox === "string" &&
+    INBOX_PATTERN.test(data.inbox) &&
+    Number.isInteger(data.internalId) &&
+    data.internalId > 0 &&
     typeof data.openText === "string" &&
     data.openText.length <= MAX_MESSAGE_LENGTH &&
     typeof data.encryptedText === "string" &&
