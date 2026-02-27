@@ -158,7 +158,8 @@ searchForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  const inbox = searchForm.searchInbox.value.trim();
+  const inboxField = searchForm.elements.namedItem("searchInbox");
+  const inbox = inboxField?.value.trim() ?? "";
   if (!INBOX_PATTERN.test(inbox)) {
     resetSearchState();
     setStatus(searchStatus, "Invalid inbox format.", true);

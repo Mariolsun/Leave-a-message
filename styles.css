@@ -73,6 +73,9 @@ button {
   padding: 0.55rem 0.8rem;
   cursor: pointer;
   font-family: inherit;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .tab.is-active {
