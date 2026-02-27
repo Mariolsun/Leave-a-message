@@ -73,6 +73,9 @@ button {
   padding: 0.55rem 0.8rem;
   cursor: pointer;
   font-family: inherit;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .tab.is-active {
@@ -153,4 +156,19 @@ code {
 .message-list button {
   width: 100%;
   text-align: left;
+}
+
+.decrypted-char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.2em);
+  animation: reveal-char 180ms ease-out forwards;
+  animation-delay: calc(var(--char-index) * 24ms);
+}
+
+@keyframes reveal-char {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

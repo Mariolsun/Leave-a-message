@@ -82,7 +82,7 @@
             Inbox Name
             <input name="searchInbox" required maxlength="80" placeholder="Find by inbox name" />
           </label>
-          <button type="submit">Load Inbox</button>
+          <button type="submit" id="load-inbox">Load Inbox</button>
         </form>
 
         <article id="search-results" class="result" hidden>
@@ -94,7 +94,7 @@
         <article id="result" class="result" hidden>
           <h2>Selected Message</h2>
           <p><strong>Open Text:</strong> <span id="result-open"></span></p>
-          <p><strong>Encrypted Text:</strong> <code id="result-encrypted"></code></p>
+          <p><strong id="result-text-label">Encrypted Text:</strong> <code id="result-encrypted"></code></p>
 
           <form id="decipher-form" autocomplete="off">
             <label>
@@ -108,8 +108,6 @@
             </label>
             <button type="submit">Decipher</button>
           </form>
-
-          <p><strong>Deciphered Text:</strong> <span id="result-deciphered">—</span></p>
         </article>
 
         <p id="search-status" class="status" role="status" aria-live="polite"></p>
