@@ -2,13 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#050b05" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Message Vault" />
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self' https://www.gstatic.com; connect-src 'self' https://firestore.googleapis.com https://*.googleapis.com https://*.firebaseio.com; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     />
     <meta name="referrer" content="no-referrer" />
     <title>Leave a Message // OTP Terminal</title>
+    <link rel="manifest" href="manifest.webmanifest" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -82,7 +88,7 @@
             Inbox Name
             <input name="searchInbox" required maxlength="80" placeholder="Find by inbox name" />
           </label>
-          <button type="submit">Load Inbox</button>
+          <button type="submit" id="load-inbox">Load Inbox</button>
         </form>
 
         <article id="search-results" class="result" hidden>
@@ -94,7 +100,7 @@
         <article id="result" class="result" hidden>
           <h2>Selected Message</h2>
           <p><strong>Open Text:</strong> <span id="result-open"></span></p>
-          <p><strong>Encrypted Text:</strong> <code id="result-encrypted"></code></p>
+          <p><strong id="result-text-label">Encrypted Text:</strong> <code id="result-encrypted"></code></p>
 
           <form id="decipher-form" autocomplete="off">
             <label>
@@ -108,8 +114,6 @@
             </label>
             <button type="submit">Decipher</button>
           </form>
-
-          <p><strong>Deciphered Text:</strong> <span id="result-deciphered">—</span></p>
         </article>
 
         <p id="search-status" class="status" role="status" aria-live="polite"></p>
