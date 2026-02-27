@@ -163,9 +163,31 @@ code {
   gap: 0.55rem;
 }
 
+
 .message-list button {
   width: 100%;
   text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.message-list__preview {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.message-list__date {
+  white-space: nowrap;
+  color: var(--green-dim);
+  font-size: 0.9em;
+  text-align: right;
+}
+
+.selected-date {
+  margin: 0 0 0.6rem;
+  color: var(--green-dim);
 }
 
 .decrypted-char {

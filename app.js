@@ -32,6 +32,7 @@ const resultCard = document.getElementById("result");
 const resultOpen = document.getElementById("result-open");
 const resultEncrypted = document.getElementById("result-encrypted");
 const resultTextLabel = document.getElementById("result-text-label");
+const resultDate = document.getElementById("result-date");
 
 const decipherForm = document.getElementById("decipher-form");
 const decipherStatus = document.getElementById("decipher-status");
@@ -210,6 +211,7 @@ resultList.addEventListener("click", (event) => {
 
   selectedMessage = foundMessages[index];
   resultOpen.textContent = selectedMessage.openText;
+  resultDate.textContent = formatSelectedMessageTimestamp(selectedMessage.createdAt);
   showEncryptedText(selectedMessage.encryptedText);
   decipherForm.reset();
   resultCard.hidden = false;
@@ -272,7 +274,7 @@ function renderFoundMessages() {
     const button = document.createElement("button");
     button.type = "button";
     button.dataset.messageIndex = String(index);
-    button.textContent = buildMessageLabel(message, index);
+    button.innerHTML = buildMessageLabel(message, index);
     item.appendChild(button);
     resultList.appendChild(item);
   });
@@ -281,7 +283,69 @@ function renderFoundMessages() {
 function buildMessageLabel(message, index) {
   const preview = message.openText.trim() || "[No open text]";
   const shortened = preview.length > 60 ? `${preview.slice(0, 60)}…` : preview;
-  return `Message ${index + 1}: ${shortened}`;
+  const leftDate = formatListDate(message.createdAt);
+  return `
+    <span class="message-list__preview">Message ${index + 1}: ${escapeHtml(shortened)}</span>
+    <span class="message-list__date">${leftDate}</span>
+  `;
+}
+
+function formatListDate(createdAt) {
+  const date = parseTimestamp(createdAt);
+  if (!date) {
+    return "Left --.--.--";
+  }
+
+  return `Left ${formatDate(date)}`;
+}
+
+function formatSelectedMessageTimestamp(createdAt) {
+  const date = parseTimestamp(createdAt);
+  if (!date) {
+    return "Left --.--.-- at --:--:--";
+  }
+
+  return `Left ${formatDate(date)} at ${formatTime(date)}`;
+}
+
+function parseTimestamp(createdAt) {
+  if (!createdAt) {
+    return null;
+  }
+
+  if (typeof createdAt.toDate === "function") {
+    return createdAt.toDate();
+  }
+
+  if (typeof createdAt.seconds === "number") {
+    return new Date(createdAt.seconds * 1000);
+  }
+
+  if (createdAt instanceof Date) {
+    return createdAt;
+  }
+
+  return null;
+}
+
+function formatDate(date) {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day}.${month}.${year}`;
+}
+
+function formatTime(date) {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${hours}:${minutes}:${seconds}`;
+}
+
+function escapeHtml(value) {
+  const node = document.createElement("div");
+  node.textContent = value;
+  return node.innerHTML;
 }
 
 function resetSearchState() {
@@ -290,6 +354,7 @@ function resetSearchState() {
   resultList.innerHTML = "";
   resultListCard.hidden = true;
   resultCard.hidden = true;
+  resultDate.textContent = "";
   resetResultDisplay();
   decipherForm.reset();
   setStatus(decipherStatus, "");
