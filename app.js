@@ -60,7 +60,8 @@ tabs.forEach((tab) => {
 });
 
 generateKeyBtn.addEventListener("click", () => {
-  const secretText = createForm.secretText.value;
+  const secretTextField = createForm.elements.namedItem("secretText");
+  const secretText = secretTextField?.value ?? "";
   if (!secretText.length) {
     setStatus(createStatus, "Write text to encrypt first.", true);
     return;
@@ -79,10 +80,15 @@ createForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  const id = createForm.id.value.trim();
-  const openText = createForm.openText.value;
-  const secretText = createForm.secretText.value;
-  const key = createForm.key.value;
+  const idField = createForm.elements.namedItem("id");
+  const openTextField = createForm.elements.namedItem("openText");
+  const secretTextField = createForm.elements.namedItem("secretText");
+  const keyField = createForm.elements.namedItem("key");
+
+  const id = idField?.value.trim() ?? "";
+  const openText = openTextField?.value ?? "";
+  const secretText = secretTextField?.value ?? "";
+  const key = keyField?.value ?? "";
 
   if (!id || !secretText || !key) {
     setStatus(createStatus, "All fields are required.", true);
