@@ -154,3 +154,18 @@ code {
   width: 100%;
   text-align: left;
 }
+
+.decrypted-char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.2em);
+  animation: reveal-char 180ms ease-out forwards;
+  animation-delay: calc(var(--char-index) * 24ms);
+}
+
+@keyframes reveal-char {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
