@@ -63,16 +63,24 @@
             OTP Key (must be at least secret text length)
             <textarea
               name="key"
-              required
               rows="3"
-              placeholder="Paste or generate a key"
+              placeholder="Paste a key, generate one, or load from file"
             ></textarea>
           </label>
 
           <div class="actions">
+            <button type="button" id="load-key-file-create">Load Key from File</button>
             <button type="button" id="generate-key">Generate Random Key</button>
             <button type="submit">Encrypt &amp; Save</button>
           </div>
+
+          <input type="file" id="key-file-create" accept=".txt" hidden />
+          <p class="drop-zone" id="drop-zone-create" role="button" tabindex="0">Drop a .txt key file here or tap to choose</p>
+
+          <label id="start-key-wrapper-create" hidden>
+            Start key from file
+            <select id="start-key-create"></select>
+          </label>
 
           <p id="key-warning" class="warning" hidden>
             Generated key is shown once. Save it now — without it, deciphering is impossible.
@@ -108,12 +116,23 @@
               OTP Key for Deciphering
               <textarea
                 name="decipherKey"
-                required
                 rows="3"
-                placeholder="Enter the original key (or longer)"
+                placeholder="Enter key manually or load it from file"
               ></textarea>
             </label>
-            <button type="submit">Decipher</button>
+
+            <div class="actions">
+              <button type="button" id="load-key-file-decipher">Load Key from File</button>
+              <button type="submit">Decipher</button>
+            </div>
+
+            <input type="file" id="key-file-decipher" accept=".txt" hidden />
+            <p class="drop-zone" id="drop-zone-decipher" role="button" tabindex="0">Drop a .txt key file here or tap to choose</p>
+
+            <label id="start-key-wrapper-decipher" hidden>
+              Start key from file
+              <select id="start-key-decipher"></select>
+            </label>
           </form>
         </article>
 

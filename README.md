@@ -11,6 +11,7 @@ A matrix/terminal-styled app for creating and deciphering one-time-pad-like mess
 - Find a message by `id` from a shared Firestore collection
 - Decipher locally in the browser with a key (keys are never stored)
 - Random key generator with a warning to save the key
+- Load OTP keys from `.txt` files (button or drag-and-drop) for both encryption and deciphering
 - Front-end hosted statically (GitHub Pages compatible), data stored in Firestore
 
 ## Firebase setup
@@ -98,3 +99,24 @@ Then visit `http://localhost:4173`.
 1. Push repository to GitHub.
 2. In **Settings → Pages**, choose branch + root folder.
 3. Make sure `firebase-config.js` is present in the deployed site (commit it if this is a public demo project, or inject it in your deploy pipeline).
+
+
+## Key file format convention
+
+When loading keys from file, use a `.txt` file with one numbered key per paragraph:
+
+```txt
+1.sdgpspofsp30SF^$%^@@#$
+
+2.25345345dFGFDH^&$#@%$
+
+3.5345334523gdfgggggggggg
+```
+
+Rules:
+- File must have a `.txt` extension.
+- Keys are parsed from paragraphs matching `<serial_number>.<key>`.
+- After loading, select a starting key from the dropdown.
+- The app concatenates keys from the selected starting key onward until the required text length is reached.
+- If there are not enough keys to cover the text length, the app shows an error.
+- This optional flow is available in both **Leave Msg** and **Find & Decipher** tabs.

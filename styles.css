@@ -12,6 +12,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -130,6 +134,26 @@ textarea {
 
 .warning {
   color: #ffe48b;
+}
+
+.drop-zone {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px dashed var(--border);
+  color: var(--green-dim);
+  text-align: center;
+  cursor: pointer;
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.drop-zone.is-dragging {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(97, 255, 126, 0.08);
 }
 
 .status {
